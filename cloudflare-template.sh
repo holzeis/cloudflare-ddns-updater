@@ -94,7 +94,7 @@ case "$update" in
      -H "Content-Type: application/json" \
      -H "OCS-APIRequest: true" \
      -u "'$talkusername':'$talktoken'" \
-    --data-raw '{ "message": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')." }'
+     --data-raw '{ "message": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')." }'
   fi
   exit 1;;
 *)
