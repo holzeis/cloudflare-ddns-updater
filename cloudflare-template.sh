@@ -1,17 +1,25 @@
-#!/bin/bash
-## change to "bin/sh" when necessary
+#!/bin/sh
 
-auth_email=""                                      # The email used to login 'https://dash.cloudflare.com'
+cf_email=$1
+cf_apikey=$2
+cf_record=$3
+cf_zoneid=$4
+
+talk_roomuri=$5
+talk_username=$6
+talk_token=$7
+
+
+auth_email=$cf_email                               # The email used to login 'https://dash.cloudflare.com'
 auth_method="token"                                # Set to "global" for Global API Key or "token" for Scoped API Token 
-auth_key=""                                        # Your API Token or Global API Key
-zone_identifier=""                                 # Can be found in the "Overview" tab of your domain
-record_name=""                                     # Which record you want to be synced
+auth_key=$cf_apikey                                # Your API Token or Global API Key
+zone_identifier=$cf_zoneid                         # Can be found in the "Overview" tab of your domain
+record_name=$cf_record                             # Which record you want to be synced
 ttl="3600"                                         # Set the DNS TTL (seconds)
-proxy=false                                        # Set the proxy to true or false
-slacksitename=""                                   # Title of site "Example Site"
-slackchannel=""                                    # Slack Channel #example
-slackuri=""                                        # URI for Slack WebHook "https://hooks.slack.com/services/xxxxx"
-
+proxy=true                                         # Set the proxy to true or false
+talkroomuri=$talk_roomuri                          # URI for nextcloud talk webhook "https://nextcloud.holzeis.me/ocs/v2.php/apps/spreed/api/v1/chat/xxxxx"
+talkusername=$talk_username                        # Webhook user name (needs to be moderator of chat)
+talktoken=$talk_token                              # API Token for user name
 
 
 ###########################################
@@ -20,7 +28,7 @@ slackuri=""                                        # URI for Slack WebHook "http
 ip=$(curl -s https://api.ipify.org || curl -s https://ipv4.icanhazip.com/)
 
 if [ "${ip}" == "" ]; then 
-  logger -s "DDNS Updater: No public IP found"
+  echo "DDNS Updater: No public IP found"
   exit 1
 fi
 
@@ -37,7 +45,7 @@ fi
 ## Seek for the A record
 ###########################################
 
-logger "DDNS Updater: Check Initiated"
+echo "DDNS Updater: Check Initiated"
 record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_identifier/dns_records?type=A&name=$record_name" \
                       -H "X-Auth-Email: $auth_email" \
                       -H "$auth_header $auth_key" \
@@ -47,7 +55,7 @@ record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$zone_identi
 ## Check if the domain has an A record
 ###########################################
 if [[ $record == *"\"count\":0"* ]]; then
-  logger -s "DDNS Updater: Record does not exist, perhaps create one first? (${ip} for ${record_name})"
+  echo "DDNS Updater: Record does not exist, perhaps create one first? (${ip} for ${record_name})"
   exit 1
 fi
 
@@ -57,7 +65,7 @@ fi
 old_ip=$(echo "$record" | sed -E 's/.*"content":"(([0-9]{1,3}\.){3}[0-9]{1,3})".*/\1/')
 # Compare if they're the same
 if [[ $ip == $old_ip ]]; then
-  logger "DDNS Updater: IP ($ip) for ${record_name} has not changed."
+  echo "DDNS Updater: IP ($ip) for ${record_name} has not changed."
   exit 0
 fi
 
@@ -80,22 +88,27 @@ update=$(curl -s -X PATCH "https://api.cloudflare.com/client/v4/zones/$zone_iden
 ###########################################
 case "$update" in
 *"\"success\":false"*)
-  logger -s "DDNS Updater: $ip $record_name DDNS failed for $record_identifier ($ip). DUMPING RESULTS:\n$update"
-  if [[ $slackuri != "" ]]; then
-    curl -L -X POST $slackuri \
+  echo "DDNS Updater: $ip $record_name DDNS failed for $record_identifier ($ip). DUMPING RESULTS:\n$update"
+  if [[ $talkroomuri != "" ]]; then
+
+    curl -L -X POST $talkroomuri \
+     -H "Content-Type: application/json" \
+     -H "OCS-APIRequest: true" \
+     -u "'$talkusername':'$talktoken'"
     --data-raw '{
-      "channel": "'$slackchannel'",
-      "text" : "'"$slacksitename"' DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')."
-    }'
+      "message": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')."
+      }'
   fi
   exit 1;;
 *)
-  logger "DDNS Updater: $ip $record_name DDNS updated."
-  if [[ $slackuri != "" ]]; then
-    curl -L -X POST $slackuri \
+  echo "DDNS Updater: $ip $record_name DDNS updated."
+  if [[ $talkroomuri != "" ]]; then
+    curl -L -X POST $talkroomuri \
+    -H "Content-Type: application/json" \
+    -H "OCS-APIRequest: true" \
+    -u "'$talkusername':'$talktoken'"
     --data-raw '{
-      "channel": "'$slackchannel'",
-      "text" : "'"$slacksitename"' Updated: '$record_name''"'"'s'""' new IP Address is '$ip'"
+      "message" : "Updated: '$record_name''"'"'s'""' new IP Address is '$ip'"
     }'
   fi
   exit 0;;
