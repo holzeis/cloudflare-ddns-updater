@@ -90,7 +90,6 @@ case "$update" in
 *"\"success\":false"*)
   echo "DDNS Updater: $ip $record_name DDNS failed for $record_identifier ($ip). DUMPING RESULTS:\n$update"
   if [[ $talkroomuri != "" ]]; then
-
     curl -L -X POST $talkroomuri \
      -H "Content-Type: application/json" \
      -H "OCS-APIRequest: true" \
