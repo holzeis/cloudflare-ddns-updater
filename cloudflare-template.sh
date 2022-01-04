@@ -94,10 +94,8 @@ case "$update" in
     curl -L -X POST $talkroomuri \
      -H "Content-Type: application/json" \
      -H "OCS-APIRequest: true" \
-     -u "'$talkusername':'$talktoken'"
-    --data-raw '{
-      "message": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')."
-      }'
+     -u "$talkusername:$talktoken" \
+     --data-raw '{ "message": "DDNS Update Failed: '$record_name': '$record_identifier' ('$ip')." }'
   fi
   exit 1;;
 *)
@@ -106,10 +104,8 @@ case "$update" in
     curl -L -X POST $talkroomuri \
     -H "Content-Type: application/json" \
     -H "OCS-APIRequest: true" \
-    -u "'$talkusername':'$talktoken'"
-    --data-raw '{
-      "message" : "Updated: '$record_name''"'"'s'""' new IP Address is '$ip'"
-    }'
+    -u "$talkusername:$talktoken" \
+    --data-raw '{ "message" : "Updated: '$record_name''"'"'s'""' new IP Address is '$ip'" }'
   fi
   exit 0;;
 esac
