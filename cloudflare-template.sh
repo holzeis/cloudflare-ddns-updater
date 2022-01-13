@@ -67,6 +67,8 @@ old_ip=$(echo "$record" | sed -E 's/.*"content":"(([0-9]{1,3}\.){3}[0-9]{1,3})".
 if [[ $ip == $old_ip ]]; then
   echo "DDNS Updater: IP ($ip) for ${record_name} has not changed."
   exit 0
+else
+  echo "IP (${old_ip}) has changed for ${record_name} to ${ip}."
 fi
 
 ###########################################
